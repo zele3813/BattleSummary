@@ -13,13 +13,12 @@ namespace BattleSummary
 {
     public class SubModule : MBSubModuleBase
     {
-        
+        //TODO: Move SubModule class to a separate assembly.
         protected override void OnSubModuleLoad()
         {
             base.OnSubModuleLoad();
             Harmony harmony = new Harmony("battle_summary");
             harmony.PatchAll();
-
         }
 
         public override void OnMissionBehaviorInitialize(Mission mission)
@@ -75,17 +74,10 @@ namespace BattleSummary
         }
 
         //Test method to see if the mission view is responsive. Every time Q is pressed, the count should be incremented.
-        public override void OnMissionScreenTick(float dt)
+/*        public override void OnMissionScreenTick(float dt)
         {
             base.OnMissionScreenTick(dt);
-
-            if (Input.IsKeyReleased(TaleWorlds.InputSystem.InputKey.Q))
-            {
-                InformationManager.DisplayMessage(new InformationMessage("Q was pressed."));
-
-                _dataSource.QPressed();
-            }
-        }
+        }*/
 
         public override void OnMissionModeChange(MissionMode oldMissionMode, bool atStart)
         {
@@ -204,23 +196,24 @@ namespace BattleSummary
         //TODO: Create a separate class to keep track of the counters.
         public void AddKill(BasicCharacterObject affectorTroop, BasicCharacterObject affectedTroop)
         {
-            if (affectorTroop.IsInfantry)
-            {
-                InfantryKills += 1;
-                InformationManager.DisplayMessage(new InformationMessage("Infantry kill detected."));
-
-            }else if (affectorTroop.IsRanged && !affectorTroop.IsMounted)
-            {
-                ArcherKills += 1;
-                InformationManager.DisplayMessage(new InformationMessage("Archer kill detected."));
-            }else if (affectorTroop.IsMounted && !affectorTroop.IsRanged)
-            {
-                CavalryKills += 1;
-                InformationManager.DisplayMessage(new InformationMessage("Cavalry kill detected."));
-            }else if (affectorTroop.IsMounted && affectorTroop.IsRanged)
+            if (affectorTroop.IsMounted && affectorTroop.IsRanged)
             {
                 CavalryArcherKills += 1;
-                InformationManager.DisplayMessage(new InformationMessage("Cavalry archer kill detected."));
+                //InformationManager.DisplayMessage(new InformationMessage("Cavalry archer kill detected."));
+            }
+            else if (affectorTroop.IsMounted)
+            {
+                CavalryKills += 1;
+                //InformationManager.DisplayMessage(new InformationMessage("Cavalry kill detected."));
+            }
+            else if (affectorTroop.IsRanged)
+            {
+                ArcherKills += 1;
+                //InformationManager.DisplayMessage(new InformationMessage("Archer kill detected."));
+            }else
+            {
+                InfantryKills += 1;
+                //InformationManager.DisplayMessage(new InformationMessage("Infantry kill detected."));
             }
         }
     }
@@ -239,10 +232,8 @@ namespace BattleSummary
                     //InformationManager.DisplayMessage(new InformationMessage("Player team kill detected."));
                     missionView.DataSource.AddKill(affectorAgent.Character, affectedAgent.Character);
                 }
-                else
-                {
-                }
-                
+                //TODO: Add kill counters for enemy
+                //TODO: Display the remaining reinforcement troop count
             }
             
         }
