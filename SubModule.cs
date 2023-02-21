@@ -1,5 +1,4 @@
-﻿using HarmonyLib;
-using TaleWorlds.CampaignSystem;
+﻿using TaleWorlds.CampaignSystem;
 using TaleWorlds.Core;
 using TaleWorlds.Engine.GauntletUI;
 using TaleWorlds.GauntletUI.Data;
@@ -17,8 +16,6 @@ namespace BattleSummary
         protected override void OnSubModuleLoad()
         {
             base.OnSubModuleLoad();
-            Harmony harmony = new Harmony("battle_summary");
-            harmony.PatchAll();
         }
 
         public override void OnMissionBehaviorInitialize(Mission mission)
@@ -48,7 +45,6 @@ namespace BattleSummary
         GauntletLayer _layer; 
         IGauntletMovie _movie;  
         BattleSummaryVM _dataSource;
-        public BattleSummaryVM DataSource;
 
         public override void OnMissionScreenInitialize()
         {
@@ -56,7 +52,6 @@ namespace BattleSummary
 
             //Set up the new layer
             _dataSource = new BattleSummaryVM(Mission);
-            DataSource = _dataSource;
             _layer = new GauntletLayer(1);
             _movie = _layer.LoadMovie("BattleSummaryHUD", _dataSource);
             MissionScreen.AddLayer(_layer);
@@ -70,14 +65,22 @@ namespace BattleSummary
             _layer = null;
             _movie = null;
             _dataSource = null;
-            DataSource = null;
         }
 
-        //Test method to see if the mission view is responsive. Every time Q is pressed, the count should be incremented.
-/*        public override void OnMissionScreenTick(float dt)
+        //Add the latest kill to the counter whenever a new agent is removed from the battle field. Only tracks the ally kill count as of now.
+        public override void OnAgentRemoved(Agent affectedAgent, Agent affectorAgent, AgentState agentState, KillingBlow blow)
         {
-            base.OnMissionScreenTick(dt);
-        }*/
+            base.OnAgentRemoved(affectedAgent, affectorAgent, agentState, blow);
+
+            //InformationManager.DisplayMessage(new InformationMessage("In MissionView OnAgentRemoved Override."));
+            
+            if (affectorAgent != null && affectedAgent != null)
+            {
+                if (affectorAgent.Team.IsPlayerAlly) _dataSource.AddKill(affectorAgent.Character, affectedAgent.Character);
+            }
+            //TODO: Add kill counters for enemy
+            //TODO: Display the remaining reinforcement troop count
+        }
 
         public override void OnMissionModeChange(MissionMode oldMissionMode, bool atStart)
         {
@@ -196,6 +199,8 @@ namespace BattleSummary
         //TODO: Create a separate class to keep track of the counters.
         public void AddKill(BasicCharacterObject affectorTroop, BasicCharacterObject affectedTroop)
         {
+            if (affectorTroop == null) return;
+
             if (affectorTroop.IsMounted && affectorTroop.IsRanged)
             {
                 CavalryArcherKills += 1;
@@ -215,27 +220,6 @@ namespace BattleSummary
                 InfantryKills += 1;
                 //InformationManager.DisplayMessage(new InformationMessage("Infantry kill detected."));
             }
-        }
-    }
-
-    //Harmony patch. Postfix. Add the latest kill to the counter whenever a new agent is removed from the battle field. Only tracks the ally kill count as of now.
-    [HarmonyPatch(typeof(Mission), "OnAgentRemoved")]
-    class MissionPatch : HarmonyPatch
-    {
-        static void Postfix(Agent affectedAgent, Agent affectorAgent)
-        {
-            var missionView = Mission.Current.GetMissionBehavior<BattleSummaryMissionView>();
-            if (affectorAgent != null && affectedAgent != null)
-            {
-                if (affectorAgent.Team.IsPlayerAlly)
-                {
-                    //InformationManager.DisplayMessage(new InformationMessage("Player team kill detected."));
-                    missionView.DataSource.AddKill(affectorAgent.Character, affectedAgent.Character);
-                }
-                //TODO: Add kill counters for enemy
-                //TODO: Display the remaining reinforcement troop count
-            }
-            
         }
     }
 }
