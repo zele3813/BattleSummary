@@ -1,4 +1,7 @@
-﻿using TaleWorlds.CampaignSystem;
+﻿using SandBox.Missions.MissionLogics;
+using System;
+using System.Linq;
+using TaleWorlds.CampaignSystem;
 using TaleWorlds.Core;
 using TaleWorlds.Engine.GauntletUI;
 using TaleWorlds.GauntletUI.Data;
@@ -24,18 +27,6 @@ namespace BattleSummary
 
             mission.AddMissionBehavior(new BattleSummaryMissionView());
         }
-
-        /*protected override void InitializeGameStarter(Game game, IGameStarter starterObject)
-        {
-            base.InitializeGameStarter(game, starterObject);
-
-            var campaignStarter = starterObject as CampaignGameStarter;
-            if (campaignStarter != null)
-            {
-                campaignStarter.AddBehavior(new )
-            }
-
-        }*/
     }
 
     public class BattleSummaryMissionView : MissionView
@@ -66,20 +57,44 @@ namespace BattleSummary
             _movie = null;
             _dataSource = null;
         }
+        
 
-        //Add the latest kill to the counter whenever a new agent is removed from the battle field. Only tracks the ally kill count as of now.
+        public override void OnMissionScreenTick(float dt)
+        {
+            base.OnMissionScreenTick(dt);
+
+            if (Input.IsKeyReleased(TaleWorlds.InputSystem.InputKey.Q))
+            {
+ /*               var missionAgents = Mission.Current.GetMissionBehavior<MissionAgentSpawnLogic>();
+                InformationManager.DisplayMessage(new InformationMessage("======================="));
+                InformationManager.DisplayMessage(new InformationMessage(string.Format("Remaining troops: {0}", missionAgents.NumberOfRemainingTroops.ToString())));
+                InformationManager.DisplayMessage(new InformationMessage(string.Format("Attacker troops: {0}", missionAgents.NumberOfActiveAttackerTroops.ToString())));
+                InformationManager.DisplayMessage(new InformationMessage(string.Format("Defender troops: {0}", missionAgents.NumberOfActiveDefenderTroops.ToString())));
+
+                //
+                InformationManager.DisplayMessage(new InformationMessage(string.Format("Battle Size: {0}", missionAgents.BattleSize.ToString())));
+                InformationManager.DisplayMessage(new InformationMessage(string.Format("Player controllable troops: {0}", missionAgents.GetNumberOfPlayerControllableTroops().ToString())));
+
+                InformationManager.DisplayMessage(new InformationMessage(string.Format("GetAllTroopsForSide Defender: {0}", missionAgents.GetAllTroopsForSide(BattleSideEnum.Defender))));
+                InformationManager.DisplayMessage(new InformationMessage(string.Format("GetAllTroopsForSide Defender: {0}", missionAgents.)));
+
+                InformationManager.DisplayMessage(new InformationMessage("======================="));
+*/
+            }
+        }
+        
+
+        //Add the latest kill to the counter whenever a new agent is removed from the battle field. Only tracks the ally kill count.
         public override void OnAgentRemoved(Agent affectedAgent, Agent affectorAgent, AgentState agentState, KillingBlow blow)
         {
             base.OnAgentRemoved(affectedAgent, affectorAgent, agentState, blow);
 
-            //InformationManager.DisplayMessage(new InformationMessage("In MissionView OnAgentRemoved Override."));
-            
-            if (affectorAgent != null && affectedAgent != null)
-            {
-                if (affectorAgent.Team.IsPlayerAlly) _dataSource.AddKill(affectorAgent.Character, affectedAgent.Character);
-            }
-            //TODO: Add kill counters for enemy
-            //TODO: Display the remaining reinforcement troop count
+            if (affectorAgent == null || affectedAgent == null || affectorAgent.Team == null || affectedAgent.Team == null || !affectedAgent.IsHuman) return;
+
+            if (affectorAgent.Team.IsPlayerAlly && !affectedAgent.Team.IsPlayerAlly)
+                _dataSource.AddKill(affectorAgent.Character, true);
+            else if (!affectorAgent.Team.IsPlayerAlly && affectedAgent.Team.IsPlayerAlly)
+                _dataSource.AddKill(affectorAgent.Character, false);
         }
 
         public override void OnMissionModeChange(MissionMode oldMissionMode, bool atStart)
@@ -92,6 +107,7 @@ namespace BattleSummary
     public class BattleSummaryVM : ViewModel
     {
         Mission _mission;
+
         public BattleSummaryVM(Mission mission)
         {
             _mission = mission;
@@ -195,30 +211,123 @@ namespace BattleSummary
             }
         }
 
-        //Add to the right category of counter
-        //TODO: Create a separate class to keep track of the counters.
-        public void AddKill(BasicCharacterObject affectorTroop, BasicCharacterObject affectedTroop)
+        int _enemyInfantryKills;
+        [DataSourceProperty]
+        public int EnemyInfantryKills
+        {
+            get
+            {
+                return this._enemyInfantryKills;
+            }
+            set
+            {
+                if (value != this._enemyInfantryKills)
+                {
+                    this._enemyInfantryKills = value;
+                    base.OnPropertyChangedWithValue(value, "EnemyInfantryKills");
+                }
+            }
+        }
+
+        int _enemyArcherKills;
+        [DataSourceProperty]
+        public int EnemyArcherKills
+        {
+            get
+            {
+                return this._enemyArcherKills;
+            }
+            set
+            {
+                if (value != this._enemyArcherKills)
+                {
+                    this._enemyArcherKills = value;
+                    base.OnPropertyChangedWithValue(value, "EnemyArcherKills");
+                }
+            }
+        }
+
+        int _enemyCavalryKills;
+        [DataSourceProperty]
+        public int EnemyCavalryKills
+        {
+            get
+            {
+                return this._enemyCavalryKills;
+            }
+            set
+            {
+                if (value != this._enemyCavalryKills)
+                {
+                    this._enemyCavalryKills = value;
+                    base.OnPropertyChangedWithValue(value, "EnemyCavalryKills");
+                }
+            }
+        }
+
+        int _enemyCavalryArcherKills;
+        [DataSourceProperty]
+        public int EnemyCavalryArcherKills
+        {
+            get
+            {
+                return this._enemyCavalryArcherKills;
+            }
+            set
+            {
+                if (value != this._enemyCavalryArcherKills)
+                {
+                    this._enemyCavalryArcherKills = value;
+                    base.OnPropertyChangedWithValue(value, "EnemyCavalryArcherKills");
+                }
+            }
+        }
+
+        //Add ally kills to the correct troop category of counter
+        //TODO: Create a separate class to keep track of the counters for ally and enemy.
+        public void AddKill(BasicCharacterObject affectorTroop, bool isAlly)
         {
             if (affectorTroop == null) return;
 
-            if (affectorTroop.IsMounted && affectorTroop.IsRanged)
+            if (isAlly)
             {
-                CavalryArcherKills += 1;
-                //InformationManager.DisplayMessage(new InformationMessage("Cavalry archer kill detected."));
+                if (affectorTroop.IsMounted && affectorTroop.IsRanged)
+                {
+                    CavalryArcherKills += 1;
+                }
+                else if (affectorTroop.IsMounted)
+                {
+                    CavalryKills += 1;
+                }
+                else if (affectorTroop.IsRanged)
+                {
+                    ArcherKills += 1;
+
+                }
+                else if (affectorTroop.IsInfantry)
+                {
+                    InfantryKills += 1;
+                }
             }
-            else if (affectorTroop.IsMounted)
+            else
             {
-                CavalryKills += 1;
-                //InformationManager.DisplayMessage(new InformationMessage("Cavalry kill detected."));
-            }
-            else if (affectorTroop.IsRanged)
-            {
-                ArcherKills += 1;
-                //InformationManager.DisplayMessage(new InformationMessage("Archer kill detected."));
-            }else
-            {
-                InfantryKills += 1;
-                //InformationManager.DisplayMessage(new InformationMessage("Infantry kill detected."));
+                if (affectorTroop.IsMounted && affectorTroop.IsRanged)
+                {
+                    EnemyCavalryArcherKills += 1;
+                }
+                else if (affectorTroop.IsMounted)
+                {
+                    EnemyCavalryKills += 1;
+                }
+                else if (affectorTroop.IsRanged)
+                {
+                    EnemyArcherKills += 1;
+
+                }
+                else if (affectorTroop.IsInfantry)
+                {
+                    EnemyInfantryKills += 1;
+                }
             }
         }
     }
